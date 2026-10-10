@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050b14;
+  --foreground: #f1f5f9;
+  --primary-accent: #3b82f6;
+  --secondary-accent: #38d9ff;
+  --nodule-highlight: #ff9a52;
+  --panel-surface: #0a1322;
+  --panel-border: #16243b;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars for radiology dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #070e1b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e3352;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #38d9ff;
+}
