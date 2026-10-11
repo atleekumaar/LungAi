@@ -148,14 +148,22 @@ def get_slice_windowed_bytes(
         else:
             slice_bytes = volume.get_sagittal_slice(slice_idx, window_center=wc, window_width=ww)
 
+        # Convert to PNG image for direct browser <img> and canvas rendering
+        from PIL import Image
+        img = Image.fromarray(slice_bytes)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        png_bytes = buf.getvalue()
+
         return Response(
-            content=slice_bytes.tobytes(),
-            media_type="application/octet-stream",
+            content=png_bytes,
+            media_type="image/png",
             headers={
                 "X-Volume-Width": str(slice_bytes.shape[1]),
                 "X-Volume-Height": str(slice_bytes.shape[0]),
                 "X-Slice-Index": str(slice_idx),
-                "X-Plane": plane
+                "X-Plane": plane,
+                "Cache-Control": "public, max-age=3600"
             }
         )
     except Exception as e:
@@ -268,3 +276,41 @@ def download_scored_candidates_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=luna16_scored_candidates.csv"}
     )
+
+from fastapi import UploadFile, File
+
+@router.post("/upload")
+async def upload_ct_scan(file: UploadFile = File(...)):
+    """
+    Accepts thoracic CT volumes (.mhd, .nii, .nii.gz, .raw).
+    Saves to data/raw/ and registers in VolumeService.
+    """
+    allowed_exts = [".mhd", ".raw", ".nii", ".gz", ".dcm"]
+    filename = file.filename or "uploaded_scan.mhd"
+    ext = os.path.splitext(filename)[1].lower()
+    
+    if not any(filename.lower().endswith(e) for e in allowed_exts):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported format '{ext}'. Allowed: .mhd, .raw, .nii, .nii.gz, .dcm"
+        )
+
+    out_path = os.path.join(settings.raw_dir, filename)
+    os.makedirs(settings.raw_dir, exist_ok=True)
+    
+    with open(out_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    volume_service.refresh_registry()
+    scan_id = os.path.splitext(filename)[0]
+    info = volume_service.get_scan_info(scan_id)
+
+    return {
+        "status": "success",
+        "message": f"Successfully uploaded and registered scan '{scan_id}'.",
+        "scan_id": scan_id,
+        "filename": filename,
+        "scan_info": info.dict() if info else None
+    }
+

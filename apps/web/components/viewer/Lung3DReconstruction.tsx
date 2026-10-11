@@ -166,19 +166,15 @@ export function Lung3DReconstruction({
       <div className="absolute right-4 top-12 z-10 bg-[#06111f]/90 border border-[#15273c] p-2.5 rounded-xl text-[10px] font-mono space-y-1.5 text-[#8fa6bf]">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#ff9b57]" />
-          <span className="text-white">Detected Nodule</span>
+          <span className="text-white">Selected Candidate</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#ffb380]" />
-          <span>Other Candidates</span>
+          <span>Candidate Proposals</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#39c7ff]" />
-          <span>Lung Mask</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#3185ff]" />
-          <span>Airway</span>
+          <span className="text-[#607996]">Thoracic Mesh (Preview)</span>
         </div>
 
         <button className="w-full mt-2 py-1 px-2 rounded-lg bg-[#0b1d33] hover:bg-[#122b4a] text-[#39c7ff] border border-[#1a385c] text-[9px] font-semibold transition-all cursor-pointer">

@@ -21,22 +21,22 @@ export function BottomPipelineStrip({ latency }: BottomStripProps) {
     {
       icon: Settings,
       title: "Preprocessing",
-      sub: "HU Normalization",
+      sub: "HU Normalization (Active)",
     },
     {
       icon: Activity,
       title: "Lung Segmentation",
-      sub: "Lung Mask",
+      sub: "Unconfigured (Bypass)",
     },
     {
       icon: Target,
-      title: "Nodule Detection",
-      sub: "2.5D CNN",
+      title: "Candidate Scoring",
+      sub: "3D CNN Classifier",
     },
     {
       icon: Filter,
-      title: "False Positive Reduction",
-      sub: "Candidate Classification",
+      title: "FP Reduction",
+      sub: "Threshold Sweep",
     },
     {
       icon: BarChart2,
@@ -48,6 +48,8 @@ export function BottomPipelineStrip({ latency }: BottomStripProps) {
   const latencyVal = latency?.mean_latency_ms
     ? `${Math.round(latency.mean_latency_ms)} ms`
     : "23 ms";
+
+  const deviceLabel = latency?.device ? `Device: ${latency.device.toUpperCase()}` : "Device: CPU / CUDA";
 
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 items-center select-none pt-2">
@@ -91,18 +93,18 @@ export function BottomPipelineStrip({ latency }: BottomStripProps) {
               {latencyVal}
             </div>
             <div className="text-[9px] text-[#8fa6bf] mt-0.5">
-              Inference Time (per slice)
+              Inference Time (per patch)
             </div>
           </div>
         </div>
 
-        {/* FPS & Hardware Specs */}
+        {/* Throughput & Hardware Specs */}
         <div className="text-right">
           <div className="text-lg font-extrabold text-white font-mono leading-none">
-            ~ 42 FPS
+            {latency?.mean_latency_ms ? `~ ${Math.round(1000 / latency.mean_latency_ms)} FPS` : "~ 42 FPS"}
           </div>
           <div className="text-[9px] text-[#8fa6bf] mt-0.5">
-            On RTX 4050 (6GB)
+            {deviceLabel}
           </div>
         </div>
       </div>

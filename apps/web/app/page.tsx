@@ -20,6 +20,7 @@ import {
   fetchModelInfo,
   fetchModelLatency,
   fetchEvaluationSummary,
+  uploadScanFile,
 } from "@/lib/api";
 import {
   ScanInfo,
@@ -37,13 +38,15 @@ export default function Home() {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
   const [scanInfo, setScanInfo] = useState<ScanInfo | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [currentSlice, setCurrentSlice] = useState<number>(181); // 182 / 512 default matching reference
+  const [currentSlice, setCurrentSlice] = useState<number>(63);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [activePlane, setActivePlane] = useState<"axial" | "coronal" | "sagittal">("axial");
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [latency, setLatency] = useState<LatencyBenchmark | null>(null);
   const [evaluation, setEvaluation] = useState<EvaluationSummary | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Initialize and poll status
   const initializeWorkspace = async () => {
@@ -203,17 +206,60 @@ export default function Home() {
       )}
 
       {activeTab === "about" && (
-        <main className="flex-1 max-w-4xl mx-auto py-12 px-6">
-          <div className="bg-[#06111f] border border-[#15273c] rounded-2xl p-8 space-y-5">
-            <h2 className="text-xl font-bold text-white">LungAI System Architecture</h2>
-            <p className="text-xs text-[#8fa6bf] leading-relaxed">
-              LungAI is a research-grade pulmonary nodule analysis platform reproducing the LUNA16 benchmark.
-              It features a 3D CNN candidate classifier, verified coordinate transformations, real HU windowing,
-              and FROC/CPM evaluation.
-            </p>
-            <div className="bg-amber-950/20 border border-amber-900/40 p-4 rounded-xl text-amber-300 text-xs">
-              <strong>Clinical Research Disclaimer:</strong> LungAI is designed exclusively for engineering and research
-              evaluation and is not certified for clinical diagnostic use.
+        <main className="flex-1 max-w-5xl w-full mx-auto py-8 px-6 space-y-6">
+          <div className="bg-[#06111f] border border-[#15273c] rounded-2xl p-8 space-y-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#15273c] pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white tracking-tight">LungAI System Architecture & Research Scope</h2>
+                <p className="text-xs text-[#8fa6bf] mt-1 font-mono">
+                  3D CONVOLUTIONAL CANDIDATE CLASSIFICATION • HU PREPROCESSING • LUNA16 FROC BENCHMARK
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-[#0b1d33] border border-[#1a385c] text-[#39c7ff] text-xs font-mono font-semibold">
+                Prototype v1.0.0
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-[#030914] border border-[#15273c] space-y-2">
+                <h4 className="text-white text-xs font-bold uppercase tracking-wider text-[#39c7ff]">1. Scope Distinction</h4>
+                <p className="text-[11px] text-[#8fa6bf] leading-relaxed">
+                  LungAI operates as a <strong>3D candidate classifier</strong> that scores supplied candidate coordinates. It is not an autonomous whole-volume detector or clinical diagnostic device.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#030914] border border-[#15273c] space-y-2">
+                <h4 className="text-white text-xs font-bold uppercase tracking-wider text-[#39c7ff]">2. Coordinate Integrity</h4>
+                <p className="text-[11px] text-[#8fa6bf] leading-relaxed">
+                  Converts millimeter physical space into continuous voxel indices using full origin, spacing, and direction matrices via SimpleITK with sub-voxel accuracy.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#030914] border border-[#15273c] space-y-2">
+                <h4 className="text-white text-xs font-bold uppercase tracking-wider text-[#39c7ff]">3. Evaluation Protocol</h4>
+                <p className="text-[11px] text-[#8fa6bf] leading-relaxed">
+                  Evaluated strictly on official LUNA16 operating points (0.125 to 8 FPs/scan) with patient/scan-level isolation to prevent train/val leakage.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#030914] border border-[#15273c] space-y-3">
+              <h4 className="text-white text-xs font-bold uppercase tracking-wider">LUNA16 Dataset Setup & Verification</h4>
+              <p className="text-xs text-[#8fa6bf] leading-relaxed">
+                To test with full LIDC-IDRI data, download the 10 subsets from the official challenge portal and place `.mhd` / `.raw` files into <code className="text-[#39c7ff] font-mono">data/raw/</code>. The application automatically indexes scanned volumes, parses <code className="text-[#39c7ff] font-mono">annotations.csv</code>, and computes slice-level coordinates.
+              </p>
+              <div className="flex gap-2">
+                <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-[#091526] text-[#8fa6bf] border border-[#15273c]">
+                  Supported Formats: MetaImage (.mhd/.raw), NIfTI (.nii/.nii.gz), DICOM (.dcm)
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-amber-950/20 border border-amber-900/40 p-4 rounded-xl text-amber-300 text-xs flex items-start gap-3">
+              <span className="text-amber-400 font-bold text-sm">⚠</span>
+              <div>
+                <strong>Clinical Research Disclaimer:</strong> LungAI is designed exclusively for engineering verification and medical imaging machine learning research. It is not FDA/CE cleared and must not be used for diagnostic or clinical decision-making.
+              </div>
             </div>
           </div>
         </main>
@@ -225,23 +271,58 @@ export default function Home() {
           <div className="bg-[#06111f] border border-[#15273c] rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="font-bold text-white text-sm mb-2">Upload CT Study</h3>
             <p className="text-xs text-[#8fa6bf] mb-4">
-              Supported formats: MetaImage (.mhd/.raw), DICOM (.dcm), or NIfTI (.nii).
+              Supported formats: MetaImage (.mhd/.raw), NIfTI (.nii/.nii.gz), or DICOM (.dcm).
             </p>
-            <div className="border-2 border-dashed border-[#1b3a5c] rounded-xl p-8 text-center text-xs text-[#8fa6bf] mb-4">
-              Drag & drop thoracic scan files here or click to browse
-            </div>
+            
+            <label className="border-2 border-dashed border-[#1b3a5c] hover:border-[#39c7ff] rounded-xl p-8 text-center text-xs text-[#8fa6bf] hover:text-white mb-4 block cursor-pointer transition-all bg-[#030914]/60">
+              <input
+                type="file"
+                className="hidden"
+                accept=".mhd,.raw,.nii,.gz,.dcm"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploading(true);
+                  setUploadError(null);
+                  const res = await uploadScanFile(file);
+                  setUploading(false);
+                  if (res && res.status === "success") {
+                    setShowUploadModal(false);
+                    const freshScans = await fetchScans();
+                    setScans(freshScans);
+                    setSelectedScanId(res.scan_id);
+                  } else {
+                    setUploadError("Upload failed. Verify scan format (.mhd, .nii, .dcm).");
+                  }
+                }}
+              />
+              <div className="space-y-2">
+                <div className="text-[#39c7ff] font-semibold">
+                  {uploading ? "Ingesting and indexing CT volume..." : "Click to select or drag & drop scan file"}
+                </div>
+                <div className="text-[10px] text-[#607996]">
+                  File will be parsed with SimpleITK and registered in the workspace
+                </div>
+              </div>
+            </label>
+
+            {uploadError && (
+              <div className="text-red-400 text-[11px] mb-3 bg-red-950/40 p-2 rounded-lg border border-red-900/50">
+                {uploadError}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 rounded-xl bg-[#091526] hover:bg-[#10243d] text-xs font-mono"
+                disabled={uploading}
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadError(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#091526] hover:bg-[#10243d] text-xs font-mono text-[#8fa6bf]"
               >
                 Cancel
-              </button>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 rounded-xl bg-[#2e7be5] hover:bg-[#256cd1] text-white text-xs font-semibold"
-              >
-                Upload
               </button>
             </div>
           </div>

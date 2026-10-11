@@ -46,16 +46,16 @@ export function Header({
       </div>
 
       {/* CENTER: Navigation Tabs matching reference */}
-      <nav className="flex items-center gap-2">
+      <nav className="flex items-center gap-3">
         {navTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-medium tracking-wide transition-all cursor-pointer ${
                 isActive
-                  ? "bg-[#0b1d33] text-[#eaf4ff] border border-[#1a385c] shadow-sm"
+                  ? "bg-[#0b1d33] text-[#39c7ff] border border-[#1a385c] shadow-sm font-semibold"
                   : "text-[#8fa6bf] hover:text-[#eaf4ff] hover:bg-[#06111f]"
               }`}
             >

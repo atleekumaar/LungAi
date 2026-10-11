@@ -130,3 +130,24 @@ export async function fetchEvaluationSummary(): Promise<any | null> {
 export function getDownloadCandidatesCsvUrl(): string {
   return `${API_BASE}/api/imaging/evaluation/download/candidates`;
 }
+
+export async function uploadScanFile(file: File): Promise<{
+  status: string;
+  message: string;
+  scan_id: string;
+  scan_info?: any;
+} | null> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/api/imaging/upload`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+

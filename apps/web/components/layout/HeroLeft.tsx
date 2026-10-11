@@ -32,7 +32,7 @@ export function HeroLeft({ onTryDemo, onLearnMore, stats }: HeroLeftProps) {
 
         {/* Supporting Copy */}
         <p className="text-[13px] text-[#8fa6bf] leading-relaxed max-w-sm mb-7">
-          AI-powered detection and localization of pulmonary nodules from CT scans with research-grade evaluation.
+          AI-powered pulmonary nodule candidate analysis from CT scans, with research-grade visualization and evaluation.
         </p>
 
         {/* Action Buttons */}
