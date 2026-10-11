@@ -1,0 +1,3 @@
+candidate_id,seriesuid,coord_x,coord_y,coord_z,class_label,model_score
+CAND-SYNTH_-001,SYNTH_SCAN_001,33.5,-52.0,-176.0,1,0.5137366652488708
+CAND-SYNTH_-002,SYNTH_SCAN_001,13.5,-37.0,-176.0,0,0.5137341022491455

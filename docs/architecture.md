@@ -1,8 +1,8 @@
-# LungAI Architecture Specification (Phases 1–6)
+# LungAI Architecture Specification (Phases 1–7)
 
 ## 1. System Overview
 
-**LungAI** is an AI pulmonary CT imaging workstation and research platform designed for reproducible nodule candidate classification and real CT visualization based on the LUNA16 benchmark.
+**LungAI** is an AI pulmonary CT imaging workstation and research platform designed for reproducible nodule candidate classification, real CT visualization, and research-grade evaluation based on the official LUNA16 benchmark.
 
 ```mermaid
 flowchart TD
@@ -15,34 +15,45 @@ flowchart TD
     G --> H["Candidate Inference Service & Job Manager"]
     H --> I["Next.js Cinematic CT Workstation"]
     F --> I
+    G --> J["Phase 7 Research Evaluator (LUNA16 FROC & CPM)"]
+    J --> K["Failure Analysis & Artifact Exporter"]
+    K --> I
 ```
 
 ## 2. Component Boundaries
 
-### 2.1 PyTorch Candidate Classifier (`ml/`)
-- **`ml/models/classifier3d.py`**: Compact 3D CNN (`NoduleCandidateClassifier3D`) accepting $32 \times 32 \times 32$ CT patches. Uses LeakyReLU, BatchNorm3d, 3D MaxPool, and global spatial pooling, outputting raw binary classification logits.
-- **`ml/candidates/dataset.py`**: PyTorch `CandidatePatchDataset` sampling centered 3D subvolumes, with constant air padding ($-1000$ HU) near volume edges and intensity normalization ($[-1000, +400]$ HU $\to [0.0, 1.0]$ float32).
-- **`ml/training/train.py`**: Full training pipeline with scan-level split enforcement (zero scan leakage), class-imbalanced weighted BCE loss, and versioned checkpoint serialization outside Git (`checkpoints/best_candidate_classifier.pt`).
-- **`ml/evaluation/metrics.py`**: Evaluation module computing accuracy, precision, recall, F1, confusion matrix, ROC-AUC, and threshold sweeps.
+### 2.1 Research Evaluation Framework (`ml/evaluation/`)
+- **`ml/evaluation/froc.py`**:
+  - Implements the official LUNA16 Free-Response ROC (FROC) matching protocol.
+  - Computes Euclidean distance $d \le \text{radius\_mm}$ between physical coordinates $(x, y, z)$ of prediction and ground truth.
+  - Duplicate rule: Multiple hits to the same reference nodule count as 1 True Positive (highest confidence score); subsequent hits are marked as duplicates and do not pollute False Positive counts.
+  - Aggregates sensitivity at 7 official operating points: $[0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]$ False Positives per scan.
+  - Computes the Competition Performance Metric (CPM) as the mean sensitivity across the 7 operating points.
+- **`ml/evaluation/failure_analysis.py`**:
+  - Categorizes False Positives (high-confidence $\ge 0.75$ vs borderline).
+  - Categorizes False Negatives (missed reference nodules).
+  - Stratifies sensitivity across nodule diameter bins: Small ($<5$ mm), Medium ($5$–$10$ mm), Large ($\ge 10$ mm).
+  - Generates machine-readable JSON and human-readable clinical Markdown reports.
+- **`ml/evaluation/evaluate.py`**:
+  - Reproducible CLI runner evaluating locked test splits and writing versioned artifacts to `artifacts/evaluation/`.
 
 ### 2.2 Inference Service & Job Manager (`services/api/`)
-- **`services/api/app/services/model_service.py`**: Dedicated singleton service loading checkpoints once during lifecycle, running evaluation inference, and measuring device latency without hardcoding.
-- **`services/api/app/services/job_manager.py`**: Bounded in-process asynchronous task manager (`ThreadPoolExecutor`) preventing GPU/CPU overload and providing progress tracking.
+- **`services/api/app/services/evaluation_service.py`**: Reads persisted evaluation summaries and reports without running redundant heavy re-computations.
 - **`services/api/app/api/routes.py`**:
-  - `GET /api/imaging/model`: Returns architecture, patch dimensions, and status.
-  - `GET /api/imaging/model/latency`: Profiles server latency.
-  - `POST /api/imaging/scans/{scan_id}/infer`: Initiates candidate scoring.
-  - `GET /api/imaging/jobs/{job_id}`: Polls async inference progress.
-  - `GET /api/imaging/scans/{scan_id}/candidates`: Returns scored candidate predictions.
+  - `GET /api/imaging/evaluation`: Returns structured FROC, classification metrics, and failure analysis.
+  - `GET /api/imaging/evaluation/report`: Returns downloadable Markdown clinical report.
+  - `GET /api/imaging/evaluation/download/candidates`: Exports scored candidates in CSV format.
 
-### 2.3 Frontend Workstation (`apps/web/`)
-- **`components/viewer/CTViewer.tsx`**: Multiplanar canvas viewer (axial, coronal, sagittal) rendering candidate crosshairs, highlighted selections, and score threshold filters.
-- **`components/candidates/CandidatePanel.tsx`**: Candidate selector triggering live model inference, filtering by confidence score, and updating candidate markers.
-- **`components/candidates/NoduleMagnifier.tsx`**: 4x magnified crop centered around selected nodule candidate with crosshairs and model probability.
-- **`components/analytics/AnalyticsPanel.tsx`**: Displays live model metadata, checkpoint validation metrics, and server latency telemetry.
+### 2.3 Research Visual Analytics (`apps/web/`)
+- **`components/analytics/AnalyticsPanel.tsx`**:
+  - Interactive SVG plot of the LUNA16 FROC curve displaying sensitivities across FP/scan points.
+  - Real-time confusion matrix and threshold sensitivity sweep table.
+  - Clinical failure analysis with diameter stratification.
+  - Per-scan evaluation metrics table.
+  - Downloadable CSV and Markdown report exports.
 
-## 3. Scope Distinction: Candidate Classification vs Autonomous Detection
+## 3. Strict Protocol Distinction
 
-LungAI clearly distinguishes between:
-1. **Candidate Classification (Implemented in Phase 4–6):** Given candidate proposals (from LUNA16 annotations or candidate generators), the model evaluates and outputs a confidence score for each location.
-2. **Whole-Volume Detection (Future Phase):** Autonomous sliding-window or 3D anchor-based proposal generation across entire unseeded lung volumes.
+- **Candidate Classification:** Evaluates candidate proposal locations.
+- **Whole-Volume Detection:** Autonomous scanning across entire unseeded lung volumes.
+- All evaluation reports clearly document this distinction.

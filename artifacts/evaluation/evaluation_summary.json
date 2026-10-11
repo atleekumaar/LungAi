@@ -1,0 +1,262 @@
+{
+  "metadata": {
+    "timestamp": "2026-10-11 13:41:15 UTC",
+    "model_architecture": "NoduleCandidateClassifier3D",
+    "model_version": "1.0.0",
+    "checkpoint_path": "checkpoints\\best_candidate_classifier.pt",
+    "dataset_provenance": "LUNA16 Evaluation Protocol",
+    "total_evaluated_scans": 1,
+    "total_candidates": 2
+  },
+  "classification_metrics": {
+    "num_samples": 2,
+    "positive_count": 1,
+    "negative_count": 1,
+    "threshold": 0.5,
+    "true_positives": 1,
+    "false_positives": 1,
+    "true_negatives": 0,
+    "false_negatives": 0,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1_score": 0.6666666666666666,
+    "accuracy": 0.5,
+    "roc_auc": 1.0,
+    "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+  },
+  "threshold_sweep": [
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.1,
+      "true_positives": 1,
+      "false_positives": 1,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.2,
+      "true_positives": 1,
+      "false_positives": 1,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.3,
+      "true_positives": 1,
+      "false_positives": 1,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.4,
+      "true_positives": 1,
+      "false_positives": 1,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.5,
+      "true_positives": 1,
+      "false_positives": 1,
+      "true_negatives": 0,
+      "false_negatives": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.6,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 1,
+      "false_negatives": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.7,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 1,
+      "false_negatives": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.8,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 1,
+      "false_negatives": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    },
+    {
+      "num_samples": 2,
+      "positive_count": 1,
+      "negative_count": 1,
+      "threshold": 0.9,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 1,
+      "false_negatives": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1_score": 0.0,
+      "accuracy": 0.5,
+      "roc_auc": 1.0,
+      "note": "Candidate-classification metrics only; does not represent full-volume detection or clinical risk."
+    }
+  ],
+  "froc_evaluation": {
+    "total_scans": 1,
+    "total_ground_truth_nodules": 1,
+    "total_evaluated_candidates": 2,
+    "total_true_positives": 1,
+    "total_false_positives": 1,
+    "cpm_score": 1.0,
+    "sensitivities_at_fp_per_scan": {
+      "0.125": 1.0,
+      "0.25": 1.0,
+      "0.5": 1.0,
+      "1.0": 1.0,
+      "2.0": 1.0,
+      "4.0": 1.0,
+      "8.0": 1.0
+    },
+    "froc_operating_points": [
+      0.125,
+      0.25,
+      0.5,
+      1.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "froc_curve": [
+      {
+        "threshold": 0.5137366652488708,
+        "false_positives_per_scan": 0.0,
+        "sensitivity": 1.0,
+        "tp_count": 1,
+        "fp_count": 0
+      },
+      {
+        "threshold": 0.5137341022491455,
+        "false_positives_per_scan": 1.0,
+        "sensitivity": 1.0,
+        "tp_count": 1,
+        "fp_count": 1
+      }
+    ],
+    "per_scan_stats": {
+      "SYNTH_SCAN_001": {
+        "seriesuid": "SYNTH_SCAN_001",
+        "ground_truth_count": 1,
+        "predictions_count": 2,
+        "true_positives": 1,
+        "false_positives": 1,
+        "duplicates": 0,
+        "scan_sensitivity": 1.0
+      }
+    }
+  },
+  "failure_analysis": {
+    "operating_threshold": 0.5,
+    "total_reference_nodules": 1,
+    "total_detected_nodules": 1,
+    "total_missed_nodules": 0,
+    "total_false_positives": 1,
+    "performance_by_diameter": {
+      "small_lt_5mm": {
+        "total_nodules": 0,
+        "detected_nodules": 0,
+        "sensitivity": 0.0
+      },
+      "medium_5_to_10mm": {
+        "total_nodules": 0,
+        "detected_nodules": 0,
+        "sensitivity": 0.0
+      },
+      "large_gte_10mm": {
+        "total_nodules": 1,
+        "detected_nodules": 1,
+        "sensitivity": 1.0
+      }
+    },
+    "false_positives": [
+      {
+        "candidate_id": "CAND-SYNTH_-002",
+        "seriesuid": "SYNTH_SCAN_001",
+        "coord_x": 13.5,
+        "coord_y": -37.0,
+        "coord_z": -176.0,
+        "model_score": 0.5137341022491455,
+        "category": "borderline_fp"
+      }
+    ],
+    "missed_nodules": []
+  }
+}

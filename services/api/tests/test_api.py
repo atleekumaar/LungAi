@@ -77,3 +77,17 @@ def test_inference_lifecycle_on_scan(client):
         assert cands_res.status_code == 200
         cands = cands_res.json()
         assert len(cands) > 0
+def test_evaluation_endpoints(client):
+    res = client.get("/api/imaging/evaluation")
+    assert res.status_code == 200
+    data = res.json()
+    assert "classification_metrics" in data
+    assert "froc_evaluation" in data
+    assert "failure_analysis" in data
+    assert "cpm_score" in data["froc_evaluation"]
+
+    # Test markdown report endpoint
+    md_res = client.get("/api/imaging/evaluation/report")
+    assert md_res.status_code == 200
+    assert "text/markdown" in md_res.headers["content-type"]
+    assert "# LungAI Model Evaluation" in md_res.text

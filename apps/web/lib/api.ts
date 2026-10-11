@@ -117,3 +117,16 @@ export function getSliceWindowedUrl(
 ) {
   return `${API_BASE}/api/imaging/scans/${scanId}/slice/${sliceIdx}/windowed?plane=${plane}&wc=${wc}&ww=${ww}`;
 }
+export async function fetchEvaluationSummary(): Promise<any | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/imaging/evaluation`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export function getDownloadCandidatesCsvUrl(): string {
+  return `${API_BASE}/api/imaging/evaluation/download/candidates`;
+}

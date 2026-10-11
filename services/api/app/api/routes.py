@@ -3,6 +3,7 @@ REST API Router for Pulmonary CT Scans, Candidate Inference, and Evaluation.
 """
 from fastapi import APIRouter, HTTPException, Query, Response, BackgroundTasks
 from typing import Optional, List, Dict, Any
+import os
 import io
 import time
 import numpy as np
@@ -10,6 +11,7 @@ import numpy as np
 from services.api.app.services.volume_service import volume_service
 from services.api.app.services.model_service import model_service
 from services.api.app.services.job_manager import job_manager
+from services.api.app.services.evaluation_service import evaluation_service
 from services.api.app.imaging.windowing import WINDOW_PRESETS
 from services.api.app.imaging.patch_extractor import extract_candidate_patch
 from services.api.app.schemas.imaging import (
@@ -230,3 +232,39 @@ def get_inference_job_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
     return JobStatusResponse(**job)
+
+@router.get("/evaluation")
+def get_evaluation_results():
+    """
+    Returns persisted LUNA16 research evaluation summary, FROC, classification metrics,
+    and failure analysis.
+    """
+    summary = evaluation_service.get_summary()
+    if not summary:
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation artifacts not yet generated. Run `python ml/evaluation/evaluate.py`."
+        )
+    return summary
+
+@router.get("/evaluation/report")
+def get_evaluation_markdown_report():
+    """Returns human-readable Markdown evaluation report."""
+    md = evaluation_service.get_markdown_report()
+    if not md:
+        raise HTTPException(status_code=404, detail="Evaluation markdown report not found.")
+    return Response(content=md, media_type="text/markdown")
+
+@router.get("/evaluation/download/candidates")
+def download_scored_candidates_csv():
+    """Downloads CSV of scored candidate predictions from evaluation."""
+    csv_path = evaluation_service.get_scored_candidates_csv_path()
+    if not csv_path or not os.path.exists(csv_path):
+        raise HTTPException(status_code=404, detail="Scored candidates CSV not found.")
+    with open(csv_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=luna16_scored_candidates.csv"}
+    )

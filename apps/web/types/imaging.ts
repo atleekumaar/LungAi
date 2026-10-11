@@ -82,3 +82,85 @@ export interface InferJobStatus {
   created_at: number;
   completed_at?: number | null;
 }
+export interface FROCPoint {
+  threshold: number;
+  false_positives_per_scan: number;
+  sensitivity: number;
+  tp_count: number;
+  fp_count: number;
+}
+
+export interface FailureAnalysis {
+  operating_threshold: number;
+  total_reference_nodules: number;
+  total_detected_nodules: number;
+  total_missed_nodules: number;
+  total_false_positives: number;
+  performance_by_diameter: Record<string, { total_nodules: number; detected_nodules: number; sensitivity: number }>;
+  false_positives: Array<{
+    candidate_id: string;
+    seriesuid: string;
+    coord_x: number;
+    coord_y: number;
+    coord_z: number;
+    model_score: number;
+    category: string;
+  }>;
+  missed_nodules: Array<{
+    seriesuid: string;
+    coord_x: number;
+    coord_y: number;
+    coord_z: number;
+    diameter_mm: number;
+    reason: string;
+  }>;
+}
+
+export interface EvaluationSummary {
+  metadata: {
+    timestamp: string;
+    model_architecture: string;
+    model_version: string;
+    checkpoint_path: string;
+    dataset_provenance: string;
+    total_evaluated_scans: number;
+    total_candidates: number;
+  };
+  classification_metrics: {
+    num_samples: number;
+    threshold: number;
+    true_positives: number;
+    false_positives: number;
+    true_negatives: number;
+    false_negatives: number;
+    accuracy: number;
+    precision: number;
+    recall: number;
+    f1_score: number;
+    roc_auc?: number | null;
+  };
+  threshold_sweep: Array<{
+    threshold: number;
+    precision: number;
+    recall: number;
+    f1_score: number;
+    accuracy: number;
+  }>;
+  froc_evaluation: {
+    total_scans: number;
+    total_ground_truth_nodules: number;
+    cpm_score: number;
+    sensitivities_at_fp_per_scan: Record<string, number>;
+    froc_operating_points: number[];
+    froc_curve: FROCPoint[];
+    per_scan_stats: Record<string, {
+      seriesuid: string;
+      ground_truth_count: number;
+      predictions_count: number;
+      true_positives: number;
+      false_positives: number;
+      scan_sensitivity: number;
+    }>;
+  };
+  failure_analysis: FailureAnalysis;
+}
