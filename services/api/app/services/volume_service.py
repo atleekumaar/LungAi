@@ -26,6 +26,8 @@ class VolumeService:
         if os.path.exists(settings.raw_dir):
             for p in glob.glob(os.path.join(settings.raw_dir, "**", "*.mhd"), recursive=True):
                 sid = os.path.splitext(os.path.basename(p))[0]
+                if sid.endswith("_lungmask"):
+                    continue
                 self._scan_paths[sid] = os.path.normpath(p)
 
         self._load_annotations()

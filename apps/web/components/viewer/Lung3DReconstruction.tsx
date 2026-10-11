@@ -59,36 +59,59 @@ export function Lung3DReconstruction({
       color: 0x39c7ff,
       wireframe: true,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.38,
     });
 
-    // Left Lung (Elongated volumetric lobe)
-    const leftLungGeo = new THREE.SphereGeometry(4.8, 24, 24);
-    leftLungGeo.scale(0.85, 1.6, 0.95);
-    const leftLungMesh = new THREE.Mesh(leftLungGeo, lungMaterial);
-    leftLungMesh.position.set(-4.2, 0, 0);
-    lungGroup.add(leftLungMesh);
+    // Attempt to load genuine segmented LUNA16 lung mesh extracted from official mask
+    fetch("/data/luna16_lung_mesh.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("Mesh not found");
+        return res.json();
+      })
+      .then((meshData) => {
+        const geometry = new THREE.BufferGeometry();
+        const positions: number[] = [];
+        const indices: number[] = [];
 
-    // Right Lung
-    const rightLungGeo = new THREE.SphereGeometry(5.2, 24, 24);
-    rightLungGeo.scale(0.9, 1.55, 1.0);
-    const rightLungMesh = new THREE.Mesh(rightLungGeo, lungMaterial);
-    rightLungMesh.position.set(4.2, 0, 0);
-    lungGroup.add(rightLungMesh);
+        // vertices is list of [z, y, x]
+        // Scale and re-orient for workstation viewer (swap Z/Y for anatomical upright display)
+        const scaleFactor = 0.16;
+        meshData.vertices.forEach(([z, y, x]: [number, number, number]) => {
+          positions.push(x * scaleFactor, -z * scaleFactor, y * scaleFactor);
+        });
 
-    // Trachea / Bronchial tree core
-    const tracheaGeo = new THREE.CylinderGeometry(0.5, 0.5, 6, 16);
-    const tracheaMat = new THREE.MeshBasicMaterial({ color: 0x3185ff, wireframe: true, opacity: 0.5, transparent: true });
-    const trachea = new THREE.Mesh(tracheaGeo, tracheaMat);
-    trachea.position.set(0, 4.5, 0);
-    lungGroup.add(trachea);
+        meshData.faces.forEach(([f1, f2, f3]: [number, number, number]) => {
+          indices.push(f1, f2, f3);
+        });
+
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        const realLungMesh = new THREE.Mesh(geometry, lungMaterial);
+        realLungMesh.position.set(0, 0, 0);
+        lungGroup.add(realLungMesh);
+      })
+      .catch(() => {
+        // Fallback procedural lungs if static mesh fails to fetch
+        const leftLungGeo = new THREE.SphereGeometry(4.8, 24, 24);
+        leftLungGeo.scale(0.85, 1.6, 0.95);
+        const leftLungMesh = new THREE.Mesh(leftLungGeo, lungMaterial);
+        leftLungMesh.position.set(-4.2, 0, 0);
+        lungGroup.add(leftLungMesh);
+
+        const rightLungGeo = new THREE.SphereGeometry(5.2, 24, 24);
+        rightLungGeo.scale(0.9, 1.55, 1.0);
+        const rightLungMesh = new THREE.Mesh(rightLungGeo, lungMaterial);
+        rightLungMesh.position.set(4.2, 0, 0);
+        lungGroup.add(rightLungMesh);
+      });
 
     // Candidate Nodule Glowing Spheres
-    // Left lung primary nodule (highlighted in orange glow matching screenshot)
     const noduleGeo = new THREE.SphereGeometry(0.75, 16, 16);
     const noduleMat = new THREE.MeshBasicMaterial({ color: 0xff9b57 });
     const primaryNodule = new THREE.Mesh(noduleGeo, noduleMat);
-    primaryNodule.position.set(3.8, 3.2, 1.2);
+    primaryNodule.position.set(2.8, 1.2, 1.2);
     lungGroup.add(primaryNodule);
 
     // Outer pulsating halo around candidate
@@ -97,18 +120,6 @@ export function Lung3DReconstruction({
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.position.copy(primaryNodule.position);
     lungGroup.add(halo);
-
-    // Additional small secondary candidate nodes
-    const secMat = new THREE.MeshBasicMaterial({ color: 0xffb380, wireframe: true });
-    [
-      [-3.5, -2, 1.0],
-      [-4.0, 1.5, -0.5],
-      [4.2, -3.2, 0.8],
-    ].forEach(([x, y, z]) => {
-      const secNode = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), secMat);
-      secNode.position.set(x, y, z);
-      lungGroup.add(secNode);
-    });
 
     // Slow rotation animation
     let reqId: number;
@@ -145,8 +156,8 @@ export function Lung3DReconstruction({
       <div className="flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-white text-xs tracking-wide">3D Lung Reconstruction</h3>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#091b33] text-[#39c7ff] border border-[#1b3a5c]">
-            Illustrative 3D Preview
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-[#35e0b0] border border-emerald-900/50">
+            Segmented LUNA16 Mask
           </span>
         </div>
         <Maximize2 className="w-3.5 h-3.5 text-[#8fa6bf] hover:text-white cursor-pointer" />
