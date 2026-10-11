@@ -1,37 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050b14;
-  --foreground: #f1f5f9;
-  --primary-accent: #3b82f6;
-  --secondary-accent: #38d9ff;
-  --nodule-highlight: #ff9a52;
-  --panel-surface: #0a1322;
-  --panel-border: #16243b;
+  --background: #020712;
+  --surface-card: #06111f;
+  --border-card: #15273c;
+  --border-card-hover: #1e3b5a;
+  --primary-cyan: #39c7ff;
+  --primary-blue: #3185ff;
+  --text-main: #eaf4ff;
+  --text-muted: #8fa6bf;
+  --candidate-orange: #ff9b57;
+  --candidate-glow: rgba(255, 155, 87, 0.45);
+  --warning-red: #ff6269;
+  --success-green: #35e0b0;
 }
 
 body {
   background-color: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars for radiology dark theme */
+/* Custom radiological scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #070e1b;
+  background: #040c18;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e3352;
-  border-radius: 3px;
+  background: #15273c;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #38d9ff;
+  background: #39c7ff;
 }
