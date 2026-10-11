@@ -111,8 +111,8 @@ export function NoduleZoom({ scan, candidate, onViewIn3D }: NoduleZoomProps) {
           </div>
 
           <div className="flex justify-between text-[11px]">
-            <span className="text-[#8fa6bf]">Malignancy (ref.)</span>
-            <span className="text-[#ff6269] font-bold">High Risk</span>
+            <span className="text-[#8fa6bf]">Operating Status</span>
+            <span className="text-[#ff9b57] font-bold">Above Threshold</span>
           </div>
         </div>
       </div>

@@ -143,7 +143,12 @@ export function Lung3DReconstruction({
     <div className="w-full h-full bg-[#06111f] border border-[#15273c] rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden select-none shadow-xl">
       {/* Top Header Bar */}
       <div className="flex items-center justify-between z-10">
-        <h3 className="font-bold text-white text-xs tracking-wide">3D Lung Reconstruction</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-white text-xs tracking-wide">3D Lung Reconstruction</h3>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#091b33] text-[#39c7ff] border border-[#1b3a5c]">
+            Illustrative 3D Preview
+          </span>
+        </div>
         <Maximize2 className="w-3.5 h-3.5 text-[#8fa6bf] hover:text-white cursor-pointer" />
       </div>
 
