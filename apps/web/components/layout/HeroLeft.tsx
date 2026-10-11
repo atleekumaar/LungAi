@@ -58,25 +58,29 @@ export function HeroLeft({ onTryDemo, onLearnMore, stats }: HeroLeftProps) {
       <div className="grid grid-cols-4 gap-2 pt-4 border-t border-[#15273c]">
         <div>
           <div className="text-xl font-extrabold text-[#39c7ff] font-mono leading-none">
-            {stats?.totalScans || 888}
+            {stats?.totalScans ? stats.totalScans : "888"}
           </div>
           <div className="text-[10px] text-[#eaf4ff] font-medium mt-1 leading-tight">CT Scans</div>
-          <div className="text-[9px] text-[#8fa6bf] leading-tight">(LUNA16)</div>
+          <div className="text-[9px] text-[#8fa6bf] leading-tight">
+            {stats?.totalScans ? "(Local Scans)" : "(Target LUNA16)"}
+          </div>
         </div>
 
         <div>
           <div className="text-xl font-extrabold text-[#39c7ff] font-mono leading-none">
             {stats?.annotatedNodules ? stats.annotatedNodules.toLocaleString() : "1,186"}
           </div>
-          <div className="text-[10px] text-[#eaf4ff] font-medium mt-1 leading-tight">Annotated</div>
-          <div className="text-[9px] text-[#8fa6bf] leading-tight">Nodules</div>
+          <div className="text-[10px] text-[#eaf4ff] font-medium mt-1 leading-tight">Nodules</div>
+          <div className="text-[9px] text-[#8fa6bf] leading-tight">
+            {stats?.annotatedNodules ? "(Loaded)" : "(Benchmark Ref)"}
+          </div>
         </div>
 
         <div>
           <div className="text-xl font-extrabold text-[#39c7ff] font-mono leading-none">
-            2D/3D
+            3D CNN
           </div>
-          <div className="text-[10px] text-[#eaf4ff] font-medium mt-1 leading-tight">Nodule Detection</div>
+          <div className="text-[10px] text-[#eaf4ff] font-medium mt-1 leading-tight">Candidate Model</div>
           <div className="text-[9px] text-[#8fa6bf] leading-tight">& Localization</div>
         </div>
 

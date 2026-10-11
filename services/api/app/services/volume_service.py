@@ -103,6 +103,24 @@ class VolumeService:
         
         meta = vol.get_metadata()
         candidates = self._annotations.get(scan_id, [])
+        
+        # Rigorous provenance check:
+        # Genuine LUNA16 scans have 1.3.6.1... UID format or were uploaded by user.
+        # Synthetically created files start with SYNTH_ or contain synthetic markers.
+        is_synthetic = scan_id.startswith("SYNTH_") or "synthetic" in vol.file_path.lower()
+        if is_synthetic:
+            dataset_mode = "synthetic_fixture"
+            is_real = False
+            prov_note = "Synthetic Unit-Test Fixture: Geometrically generated for code verification. Not a real patient."
+        elif "upload" in vol.file_path.lower():
+            dataset_mode = "user_upload"
+            is_real = True
+            prov_note = "User-Uploaded CT Scan: Thoracic volume loaded via workspace upload API."
+        else:
+            dataset_mode = "real_luna16"
+            is_real = True
+            prov_note = "Official LUNA16 / LIDC-IDRI Pulmonary CT Study."
+
         return ScanInfo(
             scan_id=scan_id,
             file_path=vol.file_path,
@@ -117,15 +135,35 @@ class VolumeService:
             mean_hu=meta.mean_hu,
             annotations_count=len(candidates),
             candidates=candidates,
+            dataset_mode=dataset_mode,
+            is_real_data=is_real,
+            provenance_note=prov_note,
         )
 
     def get_dataset_status(self) -> DatasetStatusResponse:
         self.refresh_registry()
         scans_info = []
-        for sid in list(self._scan_paths.keys())[:10]: # inspect first 10 for rapid overview
+        real_count = 0
+        synth_count = 0
+
+        for sid in list(self._scan_paths.keys()):
             info = self.get_scan_info(sid)
             if info:
                 scans_info.append(info)
+                if info.is_real_data:
+                    real_count += 1
+                else:
+                    synth_count += 1
+
+        if real_count > 0:
+            active_mode = "real_luna16_mode"
+            msg = f"Active Mode: Real CT Dataset. {real_count} real scan(s) loaded."
+        elif synth_count > 0:
+            active_mode = "synthetic_test_mode"
+            msg = f"Active Mode: Synthetic Test Fixtures ({synth_count} fixture scans). LUNA16 dataset not yet downloaded."
+        else:
+            active_mode = "no_data_mode"
+            msg = "Active Mode: Dataset Not Configured. Please place .mhd scans in data/raw/."
 
         return DatasetStatusResponse(
             data_dir_exists=os.path.exists(settings.data_dir),
@@ -133,12 +171,11 @@ class VolumeService:
             annotations_file_exists=os.path.exists(settings.annotations_csv),
             candidates_file_exists=os.path.exists(settings.candidates_csv),
             total_mhd_scans=len(self._scan_paths),
-            scans=scans_info,
-            message=(
-                f"LUNA16 registry ready. Found {len(self._scan_paths)} scan(s) in {settings.raw_dir}."
-                if len(self._scan_paths) > 0
-                else f"No .mhd CT scans found in {settings.raw_dir}. See docs/dataset.md for instructions."
-            )
+            real_scans_count=real_count,
+            synthetic_scans_count=synth_count,
+            active_mode=active_mode,
+            scans=scans_info[:10],
+            message=msg,
         )
 
 volume_service = VolumeService()

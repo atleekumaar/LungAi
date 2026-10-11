@@ -20,6 +20,7 @@ import {
   fetchModelInfo,
   fetchModelLatency,
   fetchEvaluationSummary,
+  fetchDatasetStatus,
   uploadScanFile,
 } from "@/lib/api";
 import {
@@ -28,6 +29,7 @@ import {
   ModelInfo,
   LatencyBenchmark,
   EvaluationSummary,
+  DatasetStatus,
 } from "@/types/imaging";
 
 export default function Home() {
@@ -38,24 +40,26 @@ export default function Home() {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
   const [scanInfo, setScanInfo] = useState<ScanInfo | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [currentSlice, setCurrentSlice] = useState<number>(63);
+  const [currentSlice, setCurrentSlice] = useState<number>(31);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [activePlane, setActivePlane] = useState<"axial" | "coronal" | "sagittal">("axial");
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [latency, setLatency] = useState<LatencyBenchmark | null>(null);
   const [evaluation, setEvaluation] = useState<EvaluationSummary | null>(null);
+  const [datasetStatus, setDatasetStatus] = useState<DatasetStatus | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Initialize and poll status
   const initializeWorkspace = async () => {
-    const [health, scanList, mInfo, lat, evalSum] = await Promise.all([
+    const [health, scanList, mInfo, lat, evalSum, dStatus] = await Promise.all([
       fetchHealth(),
       fetchScans(),
       fetchModelInfo(),
       fetchModelLatency(5),
       fetchEvaluationSummary(),
+      fetchDatasetStatus(),
     ]);
 
     if (health) {
@@ -71,6 +75,7 @@ export default function Home() {
     setModelInfo(mInfo);
     setLatency(lat);
     setEvaluation(evalSum);
+    setDatasetStatus(dStatus);
   };
 
   useEffect(() => {
@@ -84,7 +89,7 @@ export default function Home() {
     fetchScanDetails(selectedScanId).then((info) => {
       setScanInfo(info);
       if (info) {
-        setCurrentSlice(Math.min(181, info.num_slices - 1));
+        setCurrentSlice(Math.min(31, info.num_slices - 1));
       }
     });
 
@@ -105,6 +110,7 @@ export default function Home() {
         setActiveTab={setActiveTab}
         backendOnline={backendOnline}
         modelReady={modelReady}
+        datasetMode={datasetStatus?.active_mode || (scanInfo?.is_real_data ? "real_luna16_mode" : "synthetic_test_mode")}
         onUploadClick={() => setShowUploadModal(true)}
       />
 
@@ -120,6 +126,12 @@ export default function Home() {
                   if (scans.length > 0) setSelectedScanId(scans[0]);
                 }}
                 onLearnMore={() => setActiveTab("about")}
+                stats={{
+                  totalScans: datasetStatus?.real_scans_count || (datasetStatus?.total_mhd_scans ?? 0),
+                  annotatedNodules: scanInfo?.annotations_count ?? candidates.length,
+                  detectionType: "3D CNN",
+                  frocMetric: "LUNA16",
+                }}
               />
             </div>
 

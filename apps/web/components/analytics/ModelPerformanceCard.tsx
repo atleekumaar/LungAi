@@ -10,7 +10,11 @@ interface PerformanceCardProps {
 export function ModelPerformanceCard({ evaluation }: PerformanceCardProps) {
   const [activeView, setActiveView] = useState<"froc" | "metrics">("froc");
 
-  // Official LUNA16 FROC operating points sensitivities
+  // Determine provenance of evaluation
+  const isSyntheticArtifact = evaluation?.metadata?.dataset_provenance?.includes("Protocol") &&
+    (evaluation?.metadata?.total_evaluated_scans === 1 || !evaluation?.metadata?.total_evaluated_scans);
+
+  // Official LUNA16 benchmark operating points
   const sensMap = evaluation?.froc_evaluation?.sensitivities_at_fp_per_scan || {
     "0.125": 0.41,
     "0.25": 0.52,
@@ -29,9 +33,14 @@ export function ModelPerformanceCard({ evaluation }: PerformanceCardProps) {
     <div className="w-full h-full bg-[#06111f] border border-[#15273c] rounded-2xl p-4 flex flex-col justify-between select-none shadow-xl">
       {/* Top Header Strip */}
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-bold text-white text-xs tracking-wide">
-          Model Performance <span className="text-[#8fa6bf] font-normal">(LUNA16 Evaluation)</span>
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-white text-xs tracking-wide">
+            Model Performance
+          </h3>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#0b1d33] text-[#39c7ff] border border-[#1b3a5c]">
+            {isSyntheticArtifact ? "Test Protocol (1 Scan)" : "LUNA16 Benchmark"}
+          </span>
+        </div>
 
         {/* View Toggle Buttons matching reference */}
         <div className="flex items-center gap-1 bg-[#091526] p-0.5 rounded-lg border border-[#15273c] text-[10px] font-mono">
@@ -40,7 +49,7 @@ export function ModelPerformanceCard({ evaluation }: PerformanceCardProps) {
             className={`px-2.5 py-0.5 rounded-md transition-all ${
               activeView === "froc"
                 ? "bg-[#0f2a4a] text-[#39c7ff] font-bold border border-[#1a385c]"
-                : "text-[#8fa6bf] hover:text-white"
+                : "text-[#8fa6bf] hover:text-white cursor-pointer"
             }`}
           >
             FROC Curve
@@ -50,7 +59,7 @@ export function ModelPerformanceCard({ evaluation }: PerformanceCardProps) {
             className={`px-2.5 py-0.5 rounded-md transition-all ${
               activeView === "metrics"
                 ? "bg-[#0f2a4a] text-[#39c7ff] font-bold border border-[#1a385c]"
-                : "text-[#8fa6bf] hover:text-white"
+                : "text-[#8fa6bf] hover:text-white cursor-pointer"
             }`}
           >
             Metrics Table

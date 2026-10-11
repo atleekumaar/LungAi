@@ -13,6 +13,7 @@ export interface Candidate {
   class_label?: number | null;
   source: string; // 'reference_annotation' | 'supplied_candidate' | 'model_prediction'
   status: string;
+  is_synthetic?: boolean;
 }
 
 export interface ScanInfo {
@@ -29,6 +30,9 @@ export interface ScanInfo {
   mean_hu: number;
   annotations_count: number;
   candidates: Candidate[];
+  dataset_mode?: "real_luna16" | "user_upload" | "synthetic_fixture";
+  is_real_data?: boolean;
+  provenance_note?: string;
 }
 
 export interface DatasetStatus {
@@ -37,6 +41,9 @@ export interface DatasetStatus {
   annotations_file_exists: boolean;
   candidates_file_exists: boolean;
   total_mhd_scans: number;
+  real_scans_count?: number;
+  synthetic_scans_count?: number;
+  active_mode?: "real_luna16_mode" | "synthetic_test_mode" | "no_data_mode";
   scans: ScanInfo[];
   message: string;
 }

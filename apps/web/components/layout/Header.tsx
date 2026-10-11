@@ -8,6 +8,7 @@ interface HeaderProps {
   setActiveTab: (tab: string) => void;
   backendOnline: boolean;
   modelReady: boolean;
+  datasetMode?: string;
   onUploadClick: () => void;
 }
 
@@ -16,6 +17,7 @@ export function Header({
   setActiveTab,
   backendOnline,
   modelReady,
+  datasetMode = "synthetic_test_mode",
   onUploadClick,
 }: HeaderProps) {
   const navTabs = [
@@ -24,6 +26,11 @@ export function Header({
     { id: "analytics", label: "Analytics" },
     { id: "about", label: "About" },
   ];
+
+  const isRealData = datasetMode === "real_luna16_mode";
+  const badgeTitle = isRealData ? "LUNA16 Dataset" : "Test Fixtures Only";
+  const badgeSubtitle = isRealData ? "Real CT Scans Loaded" : "Synthetic Test Mode";
+  const badgeColor = isRealData ? "text-[#35e0b0]" : "text-[#ff9b57]";
 
   return (
     <header className="w-full h-[68px] border-b border-[#15273c] bg-[#020712] px-6 flex items-center justify-between select-none">
@@ -67,12 +74,14 @@ export function Header({
 
       {/* RIGHT: Badges & Upload Button */}
       <div className="flex items-center gap-3">
-        {/* LUNA16 Dataset Badge */}
+        {/* Honest Dataset Mode Badge */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06111f] border border-[#15273c] text-left">
-          <Database className="w-3.5 h-3.5 text-[#39c7ff]" />
+          <Database className={`w-3.5 h-3.5 ${badgeColor}`} />
           <div>
-            <div className="text-[10px] font-bold text-[#eaf4ff] leading-none">LUNA16 Dataset</div>
-            <div className="text-[9px] text-[#8fa6bf] leading-none mt-0.5">Research Prototype</div>
+            <div className={`text-[10px] font-bold ${isRealData ? "text-[#eaf4ff]" : "text-[#ffb380]"} leading-none`}>
+              {badgeTitle}
+            </div>
+            <div className="text-[9px] text-[#8fa6bf] leading-none mt-0.5">{badgeSubtitle}</div>
           </div>
         </div>
 

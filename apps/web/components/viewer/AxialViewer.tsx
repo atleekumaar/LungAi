@@ -153,7 +153,16 @@ export function AxialViewer({
       {/* Top Header Strip */}
       <div className="absolute top-0 left-0 right-0 z-20 px-4 py-3 flex items-center justify-between text-[11px] font-mono pointer-events-none">
         <div>
-          <span className="text-white font-bold text-xs tracking-wide">Axial View</span>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold text-xs tracking-wide">Axial View</span>
+            <span className={`text-[9px] px-1.5 py-0.2 rounded border ${
+              scan?.is_real_data
+                ? "bg-emerald-950/80 text-[#35e0b0] border-emerald-900/50"
+                : "bg-amber-950/80 text-[#ffb380] border-amber-900/50"
+            }`}>
+              {scan?.is_real_data ? `Real CT (${scan.scan_id})` : `Synthetic Test Fixture (${scan?.scan_id ?? "None"})`}
+            </span>
+          </div>
           <div className="text-[#8fa6bf] text-[10px] mt-0.5">
             Slice {currentSlice + 1} / {totalSlices}
           </div>

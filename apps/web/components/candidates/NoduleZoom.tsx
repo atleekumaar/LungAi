@@ -76,43 +76,59 @@ export function NoduleZoom({ scan, candidate, onViewIn3D }: NoduleZoomProps) {
         {/* Right: Candidate Details & Metrics */}
         <div className="flex-1 space-y-1.5 text-xs font-mono">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-white text-xs">
-              {candidate?.candidate_id || "Candidate #3"}
+            <span className="font-bold text-white text-xs truncate max-w-[110px]">
+              {candidate?.candidate_id || (scan?.candidates?.[0]?.candidate_id ?? "No Candidate")}
             </span>
-            <span className="text-[9px] px-2 py-0.5 rounded bg-red-950/80 text-[#ff6269] border border-red-900/50 font-bold uppercase">
-              High Confidence
+            <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${
+              candidate?.model_score !== null && candidate?.model_score !== undefined
+                ? candidate.model_score >= 0.5
+                  ? "bg-emerald-950/80 text-[#35e0b0] border-emerald-900/50"
+                  : "bg-slate-900 text-[#8fa6bf] border-[#15273c]"
+                : "bg-blue-950/80 text-[#39c7ff] border-blue-900/50"
+            }`}>
+              {candidate?.is_reference ? "Reference Ground-Truth" : "Supplied Proposal"}
             </span>
           </div>
 
           <div className="flex justify-between text-[11px] pt-1">
-            <span className="text-[#8fa6bf]">Confidence</span>
-            <span className="text-white font-bold">{scoreVal}</span>
-          </div>
-
-          <div className="flex justify-between text-[11px]">
-            <span className="text-[#8fa6bf]">Slice</span>
-            <span className="text-white font-bold">{candidate ? candidate.slice_index + 1 : 182}</span>
-          </div>
-
-          <div className="flex justify-between text-[11px]">
-            <span className="text-[#8fa6bf]">Diameter (est.)</span>
-            <span className="text-white">
-              {candidate?.diameter_mm ? `${candidate.diameter_mm.toFixed(1)} mm` : "8.4 mm"}
+            <span className="text-[#8fa6bf]">Model Score</span>
+            <span className="text-white font-bold">
+              {candidate?.model_score !== null && candidate?.model_score !== undefined
+                ? candidate.model_score.toFixed(3)
+                : "Pending / Unscored"}
             </span>
           </div>
 
           <div className="flex justify-between text-[11px]">
-            <span className="text-[#8fa6bf]">Location (x, y, z)</span>
+            <span className="text-[#8fa6bf]">Slice</span>
+            <span className="text-white font-bold">
+              {candidate ? candidate.slice_index + 1 : (scan ? 1 : "—")}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-[11px]">
+            <span className="text-[#8fa6bf]">Diameter</span>
+            <span className="text-white">
+              {candidate?.diameter_mm ? `${candidate.diameter_mm.toFixed(1)} mm` : "Not Annotated"}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-[11px]">
+            <span className="text-[#8fa6bf]">Voxel (x, y, z)</span>
             <span className="text-white">
               {candidate
                 ? `${Math.round(candidate.voxel_x)}, ${Math.round(candidate.voxel_y)}, ${candidate.slice_index + 1}`
-                : "132, 218, 182"}
+                : "—"}
             </span>
           </div>
 
           <div className="flex justify-between text-[11px]">
             <span className="text-[#8fa6bf]">Operating Status</span>
-            <span className="text-[#ff9b57] font-bold">Above Threshold</span>
+            <span className={candidate?.model_score !== null && candidate?.model_score !== undefined && candidate.model_score >= 0.5 ? "text-[#35e0b0] font-bold" : "text-[#8fa6bf] font-medium"}>
+              {candidate?.model_score !== null && candidate?.model_score !== undefined
+                ? candidate.model_score >= 0.5 ? "Above Threshold (0.50)" : "Below Threshold (0.50)"
+                : "Unscored Candidate"}
+            </span>
           </div>
         </div>
       </div>
