@@ -64,9 +64,13 @@ export function MultiPlanarView({
       ctx.drawImage(imgCor, 0, 0);
 
       if (candidate) {
+        // Vertical axis in rescaled coronal image is cranial-up:
+        const scaleY = imgCor.height / scan.num_slices;
+        const boxX = candidate.voxel_x;
+        const boxY = imgCor.height - (candidate.slice_index * scaleY);
         ctx.strokeStyle = "#ff9b57";
         ctx.lineWidth = 2.5;
-        ctx.strokeRect(candidate.voxel_x - 16, candidate.slice_index - 16, 32, 32);
+        ctx.strokeRect(boxX - 16, boxY - 16, 32, 32);
       }
     };
 
@@ -83,9 +87,12 @@ export function MultiPlanarView({
       ctx.drawImage(imgSag, 0, 0);
 
       if (candidate) {
+        const scaleY = imgSag.height / scan.num_slices;
+        const boxX = candidate.voxel_y;
+        const boxY = imgSag.height - (candidate.slice_index * scaleY);
         ctx.strokeStyle = "#ff9b57";
         ctx.lineWidth = 2.5;
-        ctx.strokeRect(candidate.voxel_y - 16, candidate.slice_index - 16, 32, 32);
+        ctx.strokeRect(boxX - 16, boxY - 16, 32, 32);
       }
     };
   }, [scan, candidate, currentSlice]);

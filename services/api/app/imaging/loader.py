@@ -110,11 +110,20 @@ class CTVolume:
         window_center: float = -600.0,
         window_width: float = 1500.0,
     ) -> np.ndarray:
-        """Coronal slice (XZ plane, across Y axis)."""
+        """Coronal slice (XZ plane, across Y axis) with true anatomical aspect ratio."""
         if y_idx < 0 or y_idx >= self.height:
             raise IndexError(f"Y index {y_idx} out of range [0, {self.height - 1}]")
-        slice_hu = self.array[:, y_idx, :]
-        return apply_ct_window(slice_hu, window_center, window_width, out_dtype=np.uint8)
+        # Flip vertically so cranial (head) is UP, caudal (feet) is DOWN
+        slice_hu = np.flipud(self.array[:, y_idx, :])
+        win_slice = apply_ct_window(slice_hu, window_center, window_width, out_dtype=np.uint8)
+        
+        # Rescale vertical dimension according to slice spacing (Z) vs pixel spacing (X)
+        from PIL import Image
+        aspect_ratio_z = self.spacing[2] / self.spacing[0]
+        target_height = int(round(win_slice.shape[0] * aspect_ratio_z))
+        pil_img = Image.fromarray(win_slice)
+        rescaled = pil_img.resize((win_slice.shape[1], target_height), Image.Resampling.BILINEAR)
+        return np.array(rescaled)
 
     def get_sagittal_slice(
         self,
@@ -122,11 +131,19 @@ class CTVolume:
         window_center: float = -600.0,
         window_width: float = 1500.0,
     ) -> np.ndarray:
-        """Sagittal slice (YZ plane, across X axis)."""
+        """Sagittal slice (YZ plane, across X axis) with true anatomical aspect ratio."""
         if x_idx < 0 or x_idx >= self.width:
             raise IndexError(f"X index {x_idx} out of range [0, {self.width - 1}]")
-        slice_hu = self.array[:, :, x_idx]
-        return apply_ct_window(slice_hu, window_center, window_width, out_dtype=np.uint8)
+        # Flip vertically so cranial is UP
+        slice_hu = np.flipud(self.array[:, :, x_idx])
+        win_slice = apply_ct_window(slice_hu, window_center, window_width, out_dtype=np.uint8)
+        
+        from PIL import Image
+        aspect_ratio_z = self.spacing[2] / self.spacing[1]
+        target_height = int(round(win_slice.shape[0] * aspect_ratio_z))
+        pil_img = Image.fromarray(win_slice)
+        rescaled = pil_img.resize((win_slice.shape[1], target_height), Image.Resampling.BILINEAR)
+        return np.array(rescaled)
 
     def physical_to_voxel(self, physical_point: Sequence[float]) -> Tuple[int, int, int]:
         return physical_to_voxel_index(self.sitk_image, physical_point)

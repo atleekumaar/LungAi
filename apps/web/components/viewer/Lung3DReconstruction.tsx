@@ -73,11 +73,9 @@ export function Lung3DReconstruction({
         const positions: number[] = [];
         const indices: number[] = [];
 
-        // vertices is list of [z, y, x]
-        // Scale and re-orient for workstation viewer (swap Z/Y for anatomical upright display)
-        const scaleFactor = 0.16;
-        meshData.vertices.forEach(([z, y, x]: [number, number, number]) => {
-          positions.push(x * scaleFactor, -z * scaleFactor, y * scaleFactor);
+        // vertices is list of [x, y, z] already centered and scaled
+        meshData.vertices.forEach(([x, y, z]: [number, number, number]) => {
+          positions.push(x, y, z);
         });
 
         meshData.faces.forEach(([f1, f2, f3]: [number, number, number]) => {
@@ -91,6 +89,23 @@ export function Lung3DReconstruction({
         const realLungMesh = new THREE.Mesh(geometry, lungMaterial);
         realLungMesh.position.set(0, 0, 0);
         lungGroup.add(realLungMesh);
+
+        // Position nodules according to calculated coordinates
+        if (meshData.nodules && meshData.nodules.length > 0) {
+          meshData.nodules.forEach((nodule: any) => {
+            const noduleGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const noduleMat = new THREE.MeshBasicMaterial({ color: 0xff9b57 });
+            const nMesh = new THREE.Mesh(noduleGeo, noduleMat);
+            nMesh.position.set(nodule.pos[0], nodule.pos[1], nodule.pos[2]);
+            lungGroup.add(nMesh);
+
+            const haloGeo = new THREE.SphereGeometry(1.6, 16, 16);
+            const haloMat = new THREE.MeshBasicMaterial({ color: 0xff9b57, wireframe: true, transparent: true, opacity: 0.5 });
+            const halo = new THREE.Mesh(haloGeo, haloMat);
+            halo.position.copy(nMesh.position);
+            lungGroup.add(halo);
+          });
+        }
       })
       .catch(() => {
         // Fallback procedural lungs if static mesh fails to fetch
@@ -106,20 +121,6 @@ export function Lung3DReconstruction({
         rightLungMesh.position.set(4.2, 0, 0);
         lungGroup.add(rightLungMesh);
       });
-
-    // Candidate Nodule Glowing Spheres
-    const noduleGeo = new THREE.SphereGeometry(0.75, 16, 16);
-    const noduleMat = new THREE.MeshBasicMaterial({ color: 0xff9b57 });
-    const primaryNodule = new THREE.Mesh(noduleGeo, noduleMat);
-    primaryNodule.position.set(2.8, 1.2, 1.2);
-    lungGroup.add(primaryNodule);
-
-    // Outer pulsating halo around candidate
-    const haloGeo = new THREE.SphereGeometry(1.4, 16, 16);
-    const haloMat = new THREE.MeshBasicMaterial({ color: 0xff9b57, wireframe: true, transparent: true, opacity: 0.4 });
-    const halo = new THREE.Mesh(haloGeo, haloMat);
-    halo.position.copy(primaryNodule.position);
-    lungGroup.add(halo);
 
     // Slow rotation animation
     let reqId: number;

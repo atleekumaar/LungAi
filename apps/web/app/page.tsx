@@ -88,8 +88,9 @@ export default function Home() {
 
     fetchScanDetails(selectedScanId).then((info) => {
       setScanInfo(info);
-      if (info) {
-        setCurrentSlice(Math.min(31, info.num_slices - 1));
+      if (info && info.candidates && info.candidates.length > 0) {
+        setSelectedCandidate(info.candidates[0]);
+        setCurrentSlice(info.candidates[0].slice_index);
       }
     });
 
