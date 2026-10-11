@@ -58,6 +58,16 @@ export function SliceStrip({
         />
       </div>
 
+      {/* Jump to Candidate Button */}
+      {scan?.candidates && scan.candidates.length > 0 && (
+        <button
+          onClick={() => onSliceChange(scan.candidates[0].slice_index)}
+          className="w-full mb-3 py-1 px-2 rounded-lg bg-[#091b33] hover:bg-[#122b4a] text-[#8fa6bf] hover:text-[#39c7ff] border border-[#15273c] text-[10px] font-mono text-center transition-all cursor-pointer"
+        >
+          Jump to {scan.candidates[0].candidate_id.slice(-3)} · slice {scan.candidates[0].slice_index + 1}
+        </button>
+      )}
+
       {/* Row of Neighboring CT Thumbnails matching reference */}
       <div className="grid grid-cols-9 gap-1.5 items-end">
         {thumbIndices.map((idx) => {

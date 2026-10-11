@@ -156,6 +156,11 @@ export default function Home() {
               <NoduleZoom
                 scan={scanInfo}
                 candidate={selectedCandidate}
+                candidates={candidates}
+                onSelectCandidate={(c) => {
+                  setSelectedCandidate(c);
+                  setCurrentSlice(c.slice_index);
+                }}
                 onViewIn3D={() => setActiveTab("3d")}
               />
 

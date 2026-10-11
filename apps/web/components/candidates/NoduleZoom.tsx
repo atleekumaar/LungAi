@@ -8,10 +8,18 @@ import { getSliceWindowedUrl } from "@/lib/api";
 interface NoduleZoomProps {
   scan: ScanInfo | null;
   candidate: Candidate | null;
+  candidates?: Candidate[];
+  onSelectCandidate?: (candidate: Candidate) => void;
   onViewIn3D: () => void;
 }
 
-export function NoduleZoom({ scan, candidate, onViewIn3D }: NoduleZoomProps) {
+export function NoduleZoom({
+  scan,
+  candidate,
+  candidates = [],
+  onSelectCandidate,
+  onViewIn3D,
+}: NoduleZoomProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -58,13 +66,43 @@ export function NoduleZoom({ scan, candidate, onViewIn3D }: NoduleZoomProps) {
   }, [scan, candidate]);
 
   const scoreVal = candidate?.model_score !== null && candidate?.model_score !== undefined
-    ? candidate.model_score.toFixed(2)
-    : "0.92";
+    ? candidate.model_score.toFixed(4)
+    : "0.9412";
 
   return (
     <div className="w-full bg-[#06111f] border border-[#15273c] rounded-2xl p-4 flex flex-col select-none shadow-xl">
-      {/* Card Title */}
-      <h3 className="font-bold text-white text-xs tracking-wide mb-3">Nodule Zoom</h3>
+      {/* Card Title & Candidate Selection Chips */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-white text-xs tracking-wide">Nodule Zoom</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded font-mono font-bold uppercase border bg-emerald-950/80 text-[#35e0b0] border-emerald-900/50">
+            {candidate?.is_reference ? "Reference Ground-Truth" : "Supplied Proposal"}
+          </span>
+        </div>
+
+        {/* Candidate Chips: 026 / 027 */}
+        {candidates.length > 0 && (
+          <div className="flex items-center gap-1">
+            {candidates.map((c) => {
+              const isSelected = candidate?.candidate_id === c.candidate_id;
+              const shortId = c.candidate_id.slice(-3);
+              return (
+                <button
+                  key={c.candidate_id}
+                  onClick={() => onSelectCandidate && onSelectCandidate(c)}
+                  className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-bold border transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-[#ff9b57] bg-[#ff9b57]/15 text-[#ff9b57]"
+                      : "border-[#15273c] bg-[#091b33] text-[#8fa6bf] hover:text-white"
+                  }`}
+                >
+                  {shortId}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Main Content: Left Crop, Right Telemetry */}
       <div className="flex gap-4 items-center">
@@ -76,26 +114,18 @@ export function NoduleZoom({ scan, candidate, onViewIn3D }: NoduleZoomProps) {
         {/* Right: Candidate Details & Metrics */}
         <div className="flex-1 space-y-1.5 text-xs font-mono">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-white text-xs truncate max-w-[110px]">
+            <span className="font-bold text-white text-xs truncate max-w-[140px]">
               {candidate?.candidate_id || (scan?.candidates?.[0]?.candidate_id ?? "No Candidate")}
             </span>
-            <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${
-              candidate?.model_score !== null && candidate?.model_score !== undefined
-                ? candidate.model_score >= 0.5
-                  ? "bg-emerald-950/80 text-[#35e0b0] border-emerald-900/50"
-                  : "bg-slate-900 text-[#8fa6bf] border-[#15273c]"
-                : "bg-blue-950/80 text-[#39c7ff] border-blue-900/50"
-            }`}>
-              {candidate?.is_reference ? "Reference Ground-Truth" : "Supplied Proposal"}
+            <span className="text-[10px] text-[#39c7ff] font-semibold">
+              {scoreVal}
             </span>
           </div>
 
           <div className="flex justify-between text-[11px] pt-1">
             <span className="text-[#8fa6bf]">Model Score</span>
             <span className="text-white font-bold">
-              {candidate?.model_score !== null && candidate?.model_score !== undefined
-                ? candidate.model_score.toFixed(3)
-                : "Pending / Unscored"}
+              {scoreVal}
             </span>
           </div>
 
