@@ -39,11 +39,15 @@ app.include_router(imaging_router, prefix="/api")
 def health_check():
     """System health check and runtime verification."""
     scans = volume_service.get_scan_list()
+    from services.api.app.services.model_service import model_service
+    meta = model_service.model_metadata
     return HealthResponse(
         status="ok",
         version=settings.api_version,
         environment=settings.environment,
         imaging_backend="SimpleITK",
+        model_status=meta.get("status", "unavailable"),
+        model_architecture=meta.get("architecture"),
         available_scans_count=len(scans),
         message="LungAI Medical Imaging API running"
     )

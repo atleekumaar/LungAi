@@ -10,28 +10,41 @@ import { NoduleMagnifier } from "@/components/candidates/NoduleMagnifier";
 import { WorkflowStatus } from "@/components/analytics/WorkflowStatus";
 import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
 import { DatasetLab } from "@/components/analytics/DatasetLab";
-import { fetchHealth, fetchScans, fetchScanDetails } from "@/lib/api";
-import { ScanInfo, Candidate } from "@/types/imaging";
+import {
+  fetchHealth,
+  fetchScans,
+  fetchScanDetails,
+  fetchScanCandidates,
+  triggerInference,
+  fetchJobStatus,
+  fetchModelInfo
+} from "@/lib/api";
+import { ScanInfo, Candidate, ModelInfo } from "@/types/imaging";
 import { Layers, Box, Cpu, AlertCircle, Info, RefreshCw } from "lucide-react";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<string>("explore");
   const [backendOnline, setBackendOnline] = useState<boolean>(false);
+  const [modelReady, setModelReady] = useState<boolean>(false);
   const [scans, setScans] = useState<string[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<string>("");
   const [scanInfo, setScanInfo] = useState<ScanInfo | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [currentSlice, setCurrentSlice] = useState<number>(0);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [windowPreset, setWindowPreset] = useState<string>("lung");
   const [activePlane, setActivePlane] = useState<"axial" | "coronal" | "sagittal">("axial");
   const [showCandidates, setShowCandidates] = useState<boolean>(true);
-  const [loadingScan, setLoadingScan] = useState<boolean>(false);
+  const [scoreThreshold, setScoreThreshold] = useState<number>(0.0);
+  const [isInferring, setIsInferring] = useState<boolean>(false);
+  const [inferProgress, setInferProgress] = useState<number>(0.0);
 
   // Poll backend health and retrieve scan list on mount
   const checkStatus = async () => {
     const health = await fetchHealth();
     if (health) {
       setBackendOnline(true);
+      setModelReady(health.model_status === "ready");
       const scanList = await fetchScans();
       setScans(scanList);
       if (scanList.length > 0 && !selectedScanId) {
@@ -39,6 +52,7 @@ export default function Home() {
       }
     } else {
       setBackendOnline(false);
+      setModelReady(false);
     }
   };
 
@@ -48,23 +62,24 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch scan details when selectedScanId changes
+  // Fetch scan details and candidates when selectedScanId changes
   useEffect(() => {
     if (!selectedScanId) return;
-    setLoadingScan(true);
     fetchScanDetails(selectedScanId).then((info) => {
       setScanInfo(info);
       if (info) {
-        // Default to middle slice
         setCurrentSlice(Math.floor(info.num_slices / 2));
-        if (info.candidates && info.candidates.length > 0) {
-          setSelectedCandidate(info.candidates[0]);
-          setCurrentSlice(info.candidates[0].slice_index);
-        } else {
-          setSelectedCandidate(null);
-        }
       }
-      setLoadingScan(false);
+    });
+
+    fetchScanCandidates(selectedScanId).then((cands) => {
+      setCandidates(cands);
+      if (cands.length > 0) {
+        setSelectedCandidate(cands[0]);
+        setCurrentSlice(cands[0].slice_index);
+      } else {
+        setSelectedCandidate(null);
+      }
     });
   }, [selectedScanId]);
 
@@ -73,7 +88,44 @@ export default function Home() {
     setSelectedCandidate(cand);
     if (activePlane === "axial") {
       setCurrentSlice(cand.slice_index);
+    } else if (activePlane === "coronal") {
+      setCurrentSlice(cand.voxel_y);
+    } else if (activePlane === "sagittal") {
+      setCurrentSlice(cand.voxel_x);
     }
+  };
+
+  // Run async candidate inference job
+  const handleRunInference = async () => {
+    if (!selectedScanId || isInferring) return;
+    setIsInferring(true);
+    setInferProgress(0.0);
+
+    const job = await triggerInference(selectedScanId);
+    if (!job) {
+      setIsInferring(false);
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      const status = await fetchJobStatus(job.job_id);
+      if (status) {
+        setInferProgress(status.progress);
+        if (status.status === "completed") {
+          clearInterval(pollInterval);
+          setIsInferring(false);
+          // Refresh candidates list with model scores
+          const updated = await fetchScanCandidates(selectedScanId);
+          setCandidates(updated);
+          if (updated.length > 0) {
+            setSelectedCandidate(updated[0]);
+          }
+        } else if (status.status === "failed") {
+          clearInterval(pollInterval);
+          setIsInferring(false);
+        }
+      }
+    }, 500);
   };
 
   return (
@@ -115,7 +167,10 @@ export default function Home() {
                     currentSlice={currentSlice}
                     totalSlices={scanInfo?.num_slices || 1}
                     onSliceChange={setCurrentSlice}
-                    selectedCandidate={showCandidates ? selectedCandidate : null}
+                    selectedCandidate={selectedCandidate}
+                    candidates={candidates}
+                    showCandidates={showCandidates}
+                    scoreThreshold={scoreThreshold}
                     windowPreset={windowPreset}
                     onWindowPresetChange={setWindowPreset}
                     activePlane={activePlane}
@@ -135,11 +190,17 @@ export default function Home() {
             <div className="space-y-6">
               <WorkflowStatus />
               <CandidatePanel
-                candidates={scanInfo?.candidates || []}
+                candidates={candidates}
                 selectedCandidate={selectedCandidate}
                 onSelectCandidate={handleSelectCandidate}
                 showCandidates={showCandidates}
                 setShowCandidates={setShowCandidates}
+                scoreThreshold={scoreThreshold}
+                setScoreThreshold={setScoreThreshold}
+                onRunInference={handleRunInference}
+                isInferring={isInferring}
+                inferProgress={inferProgress}
+                modelReady={modelReady}
               />
             </div>
           </div>
@@ -187,11 +248,17 @@ export default function Home() {
 
             <div className="flex-1 min-h-[420px]">
               <CandidatePanel
-                candidates={scanInfo?.candidates || []}
+                candidates={candidates}
                 selectedCandidate={selectedCandidate}
                 onSelectCandidate={handleSelectCandidate}
                 showCandidates={showCandidates}
                 setShowCandidates={setShowCandidates}
+                scoreThreshold={scoreThreshold}
+                setScoreThreshold={setScoreThreshold}
+                onRunInference={handleRunInference}
+                isInferring={isInferring}
+                inferProgress={inferProgress}
+                modelReady={modelReady}
               />
             </div>
           </div>
@@ -210,7 +277,10 @@ export default function Home() {
                     : scanInfo?.width || 1
                 }
                 onSliceChange={setCurrentSlice}
-                selectedCandidate={showCandidates ? selectedCandidate : null}
+                selectedCandidate={selectedCandidate}
+                candidates={candidates}
+                showCandidates={showCandidates}
+                scoreThreshold={scoreThreshold}
                 windowPreset={windowPreset}
                 onWindowPresetChange={setWindowPreset}
                 activePlane={activePlane}
@@ -255,21 +325,20 @@ export default function Home() {
                 <Layers className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">LungAI System Architecture</h2>
-                <p className="text-xs font-mono text-cyan-400">Radiology Workstation & ML Research Prototype</p>
+                <h2 className="text-xl font-bold text-white">LungAI System Architecture (Phases 1–6)</h2>
+                <p className="text-xs font-mono text-cyan-400">Pulmonary CT Workstation & PyTorch Candidate Classifier</p>
               </div>
             </div>
 
             <div className="prose prose-invert text-xs text-slate-300 space-y-4">
               <p>
-                LungAI is designed for pulmonary nodule localization and reproducible evaluation based on the
-                LUNA16 (LUng Nodule Analysis 2016) Grand Challenge benchmark.
+                LungAI implements a complete research pipeline for pulmonary CT visualization, candidate patch extraction,
+                and 3D deep-learning candidate classification.
               </p>
-              <h4 className="text-sm font-semibold text-white">Clinical Coordinates & Volume Handling</h4>
+              <h4 className="text-sm font-semibold text-white">Candidate Classifier vs Whole-Volume Detection</h4>
               <p>
-                SimpleITK image geometry is used throughout. Physical coordinates (X, Y, Z in millimeters)
-                are preserved alongside spacing, origin, and 3x3 direction cosine matrices. Slices and 3D
-                candidate patches are extracted without assuming isotropic voxels or identity orientation.
+                The implemented PyTorch 3D CNN baseline evaluates candidate proposal locations (e.g. from LUNA16 candidates.csv).
+                It is not an autonomous full-volume detector searching unseeded volumes.
               </p>
               <div className="bg-amber-950/20 border border-amber-900/40 p-4 rounded-xl text-amber-300">
                 <span className="font-bold">Notice:</span> LungAI is an academic research software prototype and

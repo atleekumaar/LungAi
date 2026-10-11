@@ -40,7 +40,6 @@ class VolumeService:
                     if sid not in self._annotations:
                         self._annotations[sid] = []
                     
-                    # We compute placeholder or exact slice voxel if volume is loaded
                     self._annotations[sid].append(CandidateItem(
                         candidate_id=f"ANN-{sid[:6]}-{i+1:03d}",
                         seriesuid=sid,
@@ -51,12 +50,21 @@ class VolumeService:
                         voxel_x=0,
                         voxel_y=0,
                         diameter_mm=a.diameter_mm,
-                        model_score=None,  # No model run yet
+                        model_score=None,
                         is_reference=True,
+                        source="reference_annotation",
                         status="reference_annotation"
                     ))
             except Exception:
                 pass
+
+    def get_candidates(self, scan_id: str) -> List[CandidateItem]:
+        # ensure volume geometry was applied to slice coordinates
+        self.get_or_load_volume(scan_id)
+        return self._annotations.get(scan_id, [])
+
+    def update_candidates(self, scan_id: str, updated_list: List[CandidateItem]):
+        self._annotations[scan_id] = updated_list
 
     def get_or_load_volume(self, scan_id: str) -> Optional[CTVolume]:
         if scan_id in self._cached_volumes:

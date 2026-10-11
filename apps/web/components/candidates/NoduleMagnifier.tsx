@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Search, ZoomIn, Crosshair, ArrowLeft } from "lucide-react";
+import { Search, Crosshair, ArrowLeft, AlertCircle } from "lucide-react";
 import { Candidate, ScanInfo } from "@/types/imaging";
 import { getSliceWindowedUrl } from "@/lib/api";
 
@@ -59,13 +59,15 @@ export function NoduleMagnifier({ scan, candidate, onClearCandidate }: NoduleMag
 
   if (!candidate) {
     return (
-      <div className="bg-[#070e1b] border border-[#16243b] rounded-2xl p-4 flex flex-col items-center justify-center text-center text-slate-500 font-mono text-xs h-[300px]">
+      <div className="bg-[#070e1b] border border-[#16243b] rounded-2xl p-4 flex flex-col items-center justify-center text-center text-slate-500 font-mono text-xs h-[320px]">
         <Search className="w-8 h-8 mb-2 text-slate-600 opacity-60" />
         <p>No candidate selected</p>
         <p className="text-[11px] text-slate-600 mt-1">Click a candidate in the panel to inspect a 4x magnified crop</p>
       </div>
     );
   }
+
+  const hasScore = candidate.model_score !== null && candidate.model_score !== undefined;
 
   return (
     <div className="bg-[#070e1b] border border-[#16243b] rounded-2xl p-4 flex flex-col shadow-xl">
@@ -87,10 +89,16 @@ export function NoduleMagnifier({ scan, candidate, onClearCandidate }: NoduleMag
         <canvas ref={canvasRef} className="rounded-lg shadow-inner" />
       </div>
 
-      <div className="bg-[#091322] border border-[#16243b] rounded-xl p-3 font-mono text-[11px] space-y-1 text-slate-300">
-        <div className="flex justify-between">
+      <div className="bg-[#091322] border border-[#16243b] rounded-xl p-3 font-mono text-[11px] space-y-1.5 text-slate-300">
+        <div className="flex justify-between items-center">
           <span className="text-slate-500">ID:</span>
           <span className="text-[#ff9a52] font-bold">{candidate.candidate_id}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-500">Model Probability:</span>
+          <span className="font-bold text-white">
+            {hasScore ? `${(candidate.model_score! * 100).toFixed(1)}% (${candidate.model_score!.toFixed(3)})` : "Unscored"}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Estimated Diameter:</span>

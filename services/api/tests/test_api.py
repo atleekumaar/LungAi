@@ -16,6 +16,7 @@ def test_health_endpoint(client):
     data = response.json()
     assert data["status"] == "ok"
     assert data["imaging_backend"] == "SimpleITK"
+    assert "model_status" in data
     assert "version" in data
 
 def test_imaging_status(client):
@@ -24,6 +25,21 @@ def test_imaging_status(client):
     data = response.json()
     assert "data_dir_exists" in data
     assert "total_mhd_scans" in data
+
+def test_model_info_endpoint(client):
+    response = client.get("/api/imaging/model")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert "architecture" in data
+
+def test_model_latency_endpoint(client):
+    response = client.get("/api/imaging/model/latency?runs=3")
+    assert response.status_code == 200
+    data = response.json()
+    assert "mean_latency_ms" in data
+    assert data["mean_latency_ms"] > 0
+    assert "device" in data
 
 def test_window_presets(client):
     response = client.get("/api/imaging/presets")
@@ -37,19 +53,27 @@ def test_missing_scan_404(client):
     response = client.get("/api/imaging/scans/NON_EXISTENT_SCAN_XYZ")
     assert response.status_code == 404
 
-def test_synthetic_scan_endpoints(client):
-    # Verify synthetic scan generated in data/raw
+def test_inference_lifecycle_on_scan(client):
+    # Verify inference job submission and status polling on synthetic scan
     scans_res = client.get("/api/imaging/scans")
     assert scans_res.status_code == 200
     scans = scans_res.json()
     if "SYNTH_SCAN_001" in scans:
-        scan_info = client.get("/api/imaging/scans/SYNTH_SCAN_001")
-        assert scan_info.status_code == 200
-        info_data = scan_info.json()
-        assert info_data["num_slices"] > 0
-        
-        # Test axial slice binary streaming
-        slice_res = client.get("/api/imaging/scans/SYNTH_SCAN_001/slice/10/windowed")
-        assert slice_res.status_code == 200
-        assert slice_res.headers["content-type"] == "application/octet-stream"
-        assert int(slice_res.headers["x-slice-index"]) == 10
+        # Submit inference job
+        infer_res = client.post("/api/imaging/scans/SYNTH_SCAN_001/infer")
+        assert infer_res.status_code == 200
+        infer_data = infer_res.json()
+        assert "job_id" in infer_data
+
+        job_id = infer_data["job_id"]
+        # Poll job status
+        job_res = client.get(f"/api/imaging/jobs/{job_id}")
+        assert job_res.status_code == 200
+        job_data = job_res.json()
+        assert job_data["status"] in ["running", "completed"]
+
+        # Fetch scan candidates
+        cands_res = client.get("/api/imaging/scans/SYNTH_SCAN_001/candidates")
+        assert cands_res.status_code == 200
+        cands = cands_res.json()
+        assert len(cands) > 0

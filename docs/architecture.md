@@ -1,65 +1,48 @@
-# LungAI Architecture Specification (Phases 1–3)
+# LungAI Architecture Specification (Phases 1–6)
 
 ## 1. System Overview
 
-**LungAI** is an AI pulmonary CT imaging workstation and research platform designed for reproducible nodule detection and evaluation against the LUNA16 benchmark.
+**LungAI** is an AI pulmonary CT imaging workstation and research platform designed for reproducible nodule candidate classification and real CT visualization based on the LUNA16 benchmark.
 
 ```mermaid
-flowchart LR
-    A["Raw LUNA16 Scans (.mhd/.raw)"] --> B["SimpleITK / NumPy Loader"]
-    B --> C["Coordinate Geometry Engine"]
+flowchart TD
+    A["Raw CT Volume (.mhd/.raw)"] --> B["SimpleITK / NumPy Loader"]
+    B --> C["Coordinate Geometry Engine (mm <-> voxels)"]
     C --> D["HU Windowing & Slicing"]
-    C --> E["3D Patch Extractor"]
-    D --> F["FastAPI Binary Streaming API"]
-    F --> G["Next.js Cinematic CT Workstation"]
-    E --> H["Phase 4 PyTorch Model Integration Boundary"]
+    C --> E["3D Patch Extractor (32x32x32)"]
+    D --> F["FastAPI Binary Slice Streaming"]
+    E --> G["PyTorch 3D CNN (NoduleCandidateClassifier3D)"]
+    G --> H["Candidate Inference Service & Job Manager"]
+    H --> I["Next.js Cinematic CT Workstation"]
+    F --> I
 ```
 
 ## 2. Component Boundaries
 
-### 2.1 Backend (`services/api/`)
-- **`app/core/config.py`**: Pydantic settings loading environment variables with fallback defaults.
-- **`app/imaging/coordinates.py`**: Encapsulates 3D coordinate conversions between physical world coordinates (mm), continuous voxel indices, integer voxel indices, and NumPy array ordering.
-- **`app/imaging/loader.py`**: `CTVolume` container handling `.mhd`/`.raw` loading, metadata extraction (origin, spacing, direction matrix), and orthogonal slicing (axial, coronal, sagittal).
-- **`app/imaging/windowing.py`**: Clinical Hounsfield Unit (HU) window/level presets (Lung: -600/1500 HU, Mediastinum: 40/400 HU, Bone: 300/1500 HU, Nodule: -500/1000 HU) and deep-learning HU input normalization (-1000 to +400 HU).
-- **`app/imaging/patch_extractor.py`**: Extracts centered 3D patches with boundary detection and constant air padding (-1000 HU) for edge candidates.
-- **`app/services/volume_service.py`**: Active CT volume cache, scan registry, and candidate association.
-- **`app/api/routes.py`**: REST and binary slice streaming endpoints.
+### 2.1 PyTorch Candidate Classifier (`ml/`)
+- **`ml/models/classifier3d.py`**: Compact 3D CNN (`NoduleCandidateClassifier3D`) accepting $32 \times 32 \times 32$ CT patches. Uses LeakyReLU, BatchNorm3d, 3D MaxPool, and global spatial pooling, outputting raw binary classification logits.
+- **`ml/candidates/dataset.py`**: PyTorch `CandidatePatchDataset` sampling centered 3D subvolumes, with constant air padding ($-1000$ HU) near volume edges and intensity normalization ($[-1000, +400]$ HU $\to [0.0, 1.0]$ float32).
+- **`ml/training/train.py`**: Full training pipeline with scan-level split enforcement (zero scan leakage), class-imbalanced weighted BCE loss, and versioned checkpoint serialization outside Git (`checkpoints/best_candidate_classifier.pt`).
+- **`ml/evaluation/metrics.py`**: Evaluation module computing accuracy, precision, recall, F1, confusion matrix, ROC-AUC, and threshold sweeps.
 
-### 2.2 Machine Learning Infrastructure (`ml/`)
-- **`data/luna16_parser.py`**: Robust parser and validator for `annotations.csv` and `candidates.csv`, filtering malformed rows and rejecting non-positive diameters.
-- **`data/manifest.py`**: Automatic dataset discovery, metadata indexing, and scan-level train/validation/test splitting with guaranteed zero leakage across splits.
-- **`data/synthetic.py` & `scripts/generate_synthetic_scan.py`**: Verifiable synthetic scan generator for continuous testing without downloading full 50GB LUNA16.
+### 2.2 Inference Service & Job Manager (`services/api/`)
+- **`services/api/app/services/model_service.py`**: Dedicated singleton service loading checkpoints once during lifecycle, running evaluation inference, and measuring device latency without hardcoding.
+- **`services/api/app/services/job_manager.py`**: Bounded in-process asynchronous task manager (`ThreadPoolExecutor`) preventing GPU/CPU overload and providing progress tracking.
+- **`services/api/app/api/routes.py`**:
+  - `GET /api/imaging/model`: Returns architecture, patch dimensions, and status.
+  - `GET /api/imaging/model/latency`: Profiles server latency.
+  - `POST /api/imaging/scans/{scan_id}/infer`: Initiates candidate scoring.
+  - `GET /api/imaging/jobs/{job_id}`: Polls async inference progress.
+  - `GET /api/imaging/scans/{scan_id}/candidates`: Returns scored candidate predictions.
 
 ### 2.3 Frontend Workstation (`apps/web/`)
-- **Tech Stack**: Next.js 16 (App Router), React 19, TypeScript strict mode, Tailwind CSS.
-- **Components**:
-  - `CTViewer`: Interactive HTML5 canvas CT viewer supporting pan, zoom, slice scrolling, multiplanar views (axial/coronal/sagittal), and candidate overlays.
-  - `SliceSlider`: Slider with Cine loop playback and keyboard navigation.
-  - `CandidatePanel`: Candidate list with ground-truth/model status, physical coords, and slice location.
-  - `NoduleMagnifier`: 4x magnified crop centered around selected nodule.
-  - `WorkflowStatus`: Real-time phase tracking without fabricating unverified metrics.
-  - `AnalyticsPanel`: FROC and CPM benchmark dashboard displaying honest pending states.
-  - `DatasetLab`: Visual dataset readiness indicator.
+- **`components/viewer/CTViewer.tsx`**: Multiplanar canvas viewer (axial, coronal, sagittal) rendering candidate crosshairs, highlighted selections, and score threshold filters.
+- **`components/candidates/CandidatePanel.tsx`**: Candidate selector triggering live model inference, filtering by confidence score, and updating candidate markers.
+- **`components/candidates/NoduleMagnifier.tsx`**: 4x magnified crop centered around selected nodule candidate with crosshairs and model probability.
+- **`components/analytics/AnalyticsPanel.tsx`**: Displays live model metadata, checkpoint validation metrics, and server latency telemetry.
 
-## 3. Coordinate Convention & Orientation Protocol
+## 3. Scope Distinction: Candidate Classification vs Autonomous Detection
 
-SimpleITK uses `(X, Y, Z)` in millimeter space:
-- $X$: Left/Right
-- $Y$: Anterior/Posterior
-- $Z$: Inferior/Superior
-
-When converted to NumPy via `sitk.GetArrayFromImage()`, the index order becomes `(Z, Y, X)` (i.e., slice, row, column).
-
-LungAI enforces:
-```python
-numpy_array[slice_idx, row_idx, col_idx] == sitk_image[x, y, z]
-```
-where $x = \text{col\_idx}$, $y = \text{row\_idx}$, $z = \text{slice\_idx}$. All coordinate calculations explicitly pass through `services/api/app/imaging/coordinates.py`.
-
-## 4. Phase 4 Model Integration Roadmap
-
-The Phase 4 deep-learning pipeline hooks directly into:
-1. `ml/candidates/`: Uses `extract_candidate_patch()` to generate 3D tensors $(C, D, H, W)$ for candidate classification.
-2. `ml/models/`: PyTorch 3D CNN / 3D ResNet / UNet backbone.
-3. `services/api/app/schemas/imaging.py`: Sets `CandidateItem.model_score` from real PyTorch inference.
+LungAI clearly distinguishes between:
+1. **Candidate Classification (Implemented in Phase 4–6):** Given candidate proposals (from LUNA16 annotations or candidate generators), the model evaluates and outputs a confidence score for each location.
+2. **Whole-Volume Detection (Future Phase):** Autonomous sliding-window or 3D anchor-based proposal generation across entire unseeded lung volumes.

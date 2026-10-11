@@ -11,6 +11,9 @@ interface CTViewerProps {
   totalSlices: number;
   onSliceChange: (slice: number) => void;
   selectedCandidate: Candidate | null;
+  candidates: Candidate[];
+  showCandidates: boolean;
+  scoreThreshold: number;
   windowPreset: string;
   onWindowPresetChange: (preset: string) => void;
   activePlane: "axial" | "coronal" | "sagittal";
@@ -23,6 +26,9 @@ export function CTViewer({
   totalSlices,
   onSliceChange,
   selectedCandidate,
+  candidates,
+  showCandidates,
+  scoreThreshold,
   windowPreset,
   onWindowPresetChange,
   activePlane,
@@ -76,41 +82,67 @@ export function CTViewer({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
 
-      // Render Candidate Overlay if candidate belongs to this slice
-      if (
-        selectedCandidate &&
-        selectedCandidate.slice_index === currentSlice &&
-        activePlane === "axial"
-      ) {
-        const vx = selectedCandidate.voxel_x;
-        const vy = selectedCandidate.voxel_y;
-        const rad = Math.max(6, (selectedCandidate.diameter_mm || 8) * 1.5);
+      // Render candidates on current slice if visible
+      if (showCandidates) {
+        // Filter candidates on this slice matching score threshold
+        const sliceCandidates = candidates.filter((c) => {
+          if (c.model_score !== null && c.model_score !== undefined) {
+            return c.model_score >= scoreThreshold;
+          }
+          return true; // Keep reference annotations visible
+        });
 
-        // Highlight ring in orange (#FF9A52)
-        ctx.strokeStyle = "#ff9a52";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(vx, vy, rad, 0, 2 * Math.PI);
-        ctx.stroke();
+        for (const cand of sliceCandidates) {
+          // Check if candidate matches plane and slice index
+          let isMatch = false;
+          let ptX = 0;
+          let ptY = 0;
 
-        // Crosshair
-        ctx.strokeStyle = "rgba(255, 154, 82, 0.7)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(vx - rad - 6, vy);
-        ctx.lineTo(vx + rad + 6, vy);
-        ctx.moveTo(vx, vy - rad - 6);
-        ctx.lineTo(vx, vy + rad + 6);
-        ctx.stroke();
+          if (activePlane === "axial" && cand.slice_index === currentSlice) {
+            isMatch = true;
+            ptX = cand.voxel_x;
+            ptY = cand.voxel_y;
+          } else if (activePlane === "coronal" && cand.voxel_y === currentSlice) {
+            isMatch = true;
+            ptX = cand.voxel_x;
+            ptY = cand.slice_index;
+          } else if (activePlane === "sagittal" && cand.voxel_x === currentSlice) {
+            isMatch = true;
+            ptX = cand.voxel_y;
+            ptY = cand.slice_index;
+          }
 
-        // Candidate Label
-        ctx.fillStyle = "#ff9a52";
-        ctx.font = "bold 11px monospace";
-        ctx.fillText(
-          `${selectedCandidate.candidate_id} (${selectedCandidate.diameter_mm ? selectedCandidate.diameter_mm.toFixed(1) + 'mm' : 'Ref'})`,
-          vx + rad + 4,
-          vy - 4
-        );
+          if (isMatch) {
+            const isSelected = selectedCandidate?.candidate_id === cand.candidate_id;
+            const rad = Math.max(6, (cand.diameter_mm || 8) * 1.5);
+
+            // Color: orange for candidate, cyan/blue if selected
+            ctx.strokeStyle = isSelected ? "#38d9ff" : cand.source === "model_prediction" ? "#ff9a52" : "#f59e0b";
+            ctx.lineWidth = isSelected ? 3.0 : 2.0;
+
+            ctx.beginPath();
+            ctx.arc(ptX, ptY, rad, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // Crosshair markers
+            ctx.strokeStyle = isSelected ? "rgba(56, 217, 255, 0.8)" : "rgba(255, 154, 82, 0.7)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(ptX - rad - 5, ptY);
+            ctx.lineTo(ptX + rad + 5, ptY);
+            ctx.moveTo(ptX, ptY - rad - 5);
+            ctx.lineTo(ptX, ptY + rad + 5);
+            ctx.stroke();
+
+            // Label text
+            ctx.fillStyle = isSelected ? "#38d9ff" : "#ff9a52";
+            ctx.font = isSelected ? "bold 12px monospace" : "11px monospace";
+            const scoreLabel = cand.model_score !== null && cand.model_score !== undefined
+              ? `Score: ${cand.model_score.toFixed(2)}`
+              : "LUNA16 Ref";
+            ctx.fillText(`${cand.candidate_id} (${scoreLabel})`, ptX + rad + 4, ptY - 4);
+          }
+        }
       }
     };
 
@@ -118,7 +150,7 @@ export function CTViewer({
       setLoadingSlice(false);
       setImgError(true);
     };
-  }, [scan, currentSlice, activePlane, windowPreset, selectedCandidate]);
+  }, [scan, currentSlice, activePlane, windowPreset, selectedCandidate, candidates, showCandidates, scoreThreshold]);
 
   // Mouse wheel for slice scrolling
   const handleWheel = (e: React.WheelEvent) => {
@@ -225,7 +257,7 @@ export function CTViewer({
           </div>
         )}
 
-        {/* Loading Spinner / Error Overlay */}
+        {/* Loading Spinner */}
         {loadingSlice && (
           <div className="absolute top-4 right-4 bg-[#091426]/90 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-mono text-cyan-300 flex items-center gap-2 shadow-lg backdrop-blur">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
